@@ -18,9 +18,7 @@ assert len(caption)<=2200, '캡션이 2200자를 넘습니다'
 repo=os.environ['GITHUB_REPOSITORY']; sha=os.environ.get('GITHUB_SHA','main')
 urls=[f'https://raw.githubusercontent.com/{repo}/{sha}/{p}' for p in imgs]
 print(f'{date}: 이미지 {len(urls)}장'); [print(' ',u) for u in urls]
-if dry: print('DRY_RUN: 발행하지 않고 종료'); sys.exit(0)
-
-IG=os.environ['IG_USER_ID']; TOKEN=os.environ['IG_ACCESS_TOKEN']
+IG=os.environ.get('IG_USER_ID',''); TOKEN=os.environ.get('IG_ACCESS_TOKEN','')
 BASE=f"https://{os.environ.get('GRAPH_HOST') or 'graph.facebook.com'}/{os.environ.get('GRAPH_VERSION') or 'v23.0'}"
 
 def call(method,path,**params):
@@ -40,6 +38,11 @@ def wait(cid):
         if s in ('ERROR','EXPIRED'): raise RuntimeError(f'{cid} 상태 {s}')
         time.sleep(5)
     raise RuntimeError(f'{cid} 처리 시간 초과')
+
+if dry:
+    if not (IG and TOKEN): print('DRY_RUN: IG_USER_ID 또는 IG_ACCESS_TOKEN 시크릿이 없습니다'); sys.exit(1)
+    me=call('GET',IG,fields='username')
+    print(f"DRY_RUN: 토큰 정상, 연결된 계정 @{me.get('username')} — 발행하지 않고 종료"); sys.exit(0)
 
 if len(urls)==1:
     cid=call('POST',f'{IG}/media',image_url=urls[0],caption=caption)['id']
