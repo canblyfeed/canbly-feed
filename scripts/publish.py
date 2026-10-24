@@ -42,7 +42,11 @@ def wait(cid):
 if dry:
     if not (IG and TOKEN): print('DRY_RUN: IG_USER_ID 또는 IG_ACCESS_TOKEN 시크릿이 없습니다'); sys.exit(1)
     me=call('GET',IG,fields='username')
-    print(f"DRY_RUN: 토큰 정상, 연결된 계정 @{me.get('username')} — 발행하지 않고 종료"); sys.exit(0)
+    print(f"DRY_RUN: 토큰 정상, 연결된 계정 @{me.get('username')}")
+    # 게시 권한 확인: 업로드 준비(컨테이너)만 만들고 발행은 하지 않는다. 미발행 컨테이너는 24시간 뒤 자동 만료된다
+    test=call('POST',f'{IG}/media',image_url=urls[0],is_carousel_item='true')['id']
+    wait(test)
+    print('DRY_RUN: 게시 권한 정상 (업로드 준비까지만 확인, 실제 발행은 하지 않음)'); sys.exit(0)
 
 if len(urls)==1:
     cid=call('POST',f'{IG}/media',image_url=urls[0],caption=caption)['id']
