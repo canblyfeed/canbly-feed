@@ -1,11 +1,18 @@
 name: 인스타 자동 발행
 on:
   schedule:
-    - cron: '0 11 * * *'   # 매일 20:00 (한국 시간). GitHub 사정으로 몇 분~수십 분 늦을 수 있음
+    # 월·수·금 한국 시간 08:00 / 14:00 / 20:00 (cron은 UTC). GitHub 사정으로 몇 분~수십 분 늦을 수 있음
+    # 바꾸면 scripts/publish.py의 SLOT_BY_CRON도 같이 바꾼다
+    - cron: '0 23 * * 0,2,4'   # 월·수·금 08:00 → <날짜>_1 홈페이지
+    - cron: '0 5 * * 1,3,5'    # 월·수·금 14:00 → <날짜>_2 홈페이지
+    - cron: '0 11 * * 1,3,5'   # 월·수·금 20:00 → <날짜>_3 블로그
   workflow_dispatch:
     inputs:
       date:
         description: '발행할 날짜 (YYYY-MM-DD, 비우면 오늘)'
+        required: false
+      slot:
+        description: '몇 번째 게시물까지 (1=08시 홈, 2=14시 홈, 3=20시 블로그). 비우면 지금 시각 기준'
         required: false
       dry_run:
         description: 'true면 실제 발행 없이 점검만'
@@ -26,6 +33,8 @@ jobs:
           GRAPH_HOST: ${{ vars.GRAPH_HOST }}
           GRAPH_VERSION: ${{ vars.GRAPH_VERSION }}
           POST_DATE: ${{ github.event.inputs.date }}
+          POST_SLOT: ${{ github.event.inputs.slot }}
+          CRON_SCHEDULE: ${{ github.event.schedule }}
           DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: python3 scripts/publish.py
       - name: 발행 기록 저장
