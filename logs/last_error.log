@@ -1,0 +1,33 @@
+실패 시각(UTC): 2026-11-01T23:26:52Z  이벤트: schedule 0 23 * * 0,2,4
+posts/2026-11-02_1: 이미지 7장
+  https://raw.githubusercontent.com/canblyfeed/canbly-feed/9372e6bec2b04670a882e339de01fcecbd8d1d67/posts/2026-11-02_1/01.jpg
+  https://raw.githubusercontent.com/canblyfeed/canbly-feed/9372e6bec2b04670a882e339de01fcecbd8d1d67/posts/2026-11-02_1/02.jpg
+  https://raw.githubusercontent.com/canblyfeed/canbly-feed/9372e6bec2b04670a882e339de01fcecbd8d1d67/posts/2026-11-02_1/03.jpg
+  https://raw.githubusercontent.com/canblyfeed/canbly-feed/9372e6bec2b04670a882e339de01fcecbd8d1d67/posts/2026-11-02_1/04.jpg
+  https://raw.githubusercontent.com/canblyfeed/canbly-feed/9372e6bec2b04670a882e339de01fcecbd8d1d67/posts/2026-11-02_1/05.jpg
+  https://raw.githubusercontent.com/canblyfeed/canbly-feed/9372e6bec2b04670a882e339de01fcecbd8d1d67/posts/2026-11-02_1/06.jpg
+  https://raw.githubusercontent.com/canblyfeed/canbly-feed/9372e6bec2b04670a882e339de01fcecbd8d1d67/posts/2026-11-02_1/07.jpg
+API 오류: {"error":{"message":"Media ID is not available","type":"OAuthException","code":9007,"error_subcode":2207027,"is_transient":false,"error_user_title":"Cannot Publish","error_user_msg":"The media is not ready for publishing, please wait for a moment","fbtrace_id":"AiYEiUblcQyPEkZ0ReqjwT4"}}
+Traceback (most recent call last):
+  File "/home/runner/work/canbly-feed/canbly-feed/scripts/publish.py", line 76, in <module>
+    mid=call('POST',f'{IG}/media_publish',creation_id=cid)['id']
+        ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "/home/runner/work/canbly-feed/canbly-feed/scripts/publish.py", line 36, in call
+    with urllib.request.urlopen(req,timeout=60) as r: return json.load(r)
+         ~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/urllib/request.py", line 187, in urlopen
+    return opener.open(url, data, timeout)
+           ~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^
+  File "/usr/lib/python3.14/urllib/request.py", line 493, in open
+    response = meth(req, response)
+  File "/usr/lib/python3.14/urllib/request.py", line 602, in http_response
+    response = self.parent.error(
+        'http', request, response, code, msg, hdrs)
+  File "/usr/lib/python3.14/urllib/request.py", line 531, in error
+    return self._call_chain(*args)
+           ~~~~~~~~~~~~~~~~^^^^^^^
+  File "/usr/lib/python3.14/urllib/request.py", line 464, in _call_chain
+    result = func(*args)
+  File "/usr/lib/python3.14/urllib/request.py", line 611, in http_error_default
+    raise HTTPError(req.full_url, code, msg, hdrs, fp)
+urllib.error.HTTPError: HTTP Error 400: Bad Request
