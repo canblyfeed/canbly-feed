@@ -2,6 +2,8 @@ name: 인스타 릴스 자동 발행
 on:
   schedule:
     - cron: '0 11 * * 1-5'   # 월~금 20:00 (한국 시간). GitHub 사정으로 몇 분~수십 분 늦을 수 있음
+  push:
+    paths: ['.github/dryrun-reel.txt']   # 이 파일에 날짜를 적어 푸시하면 점검(dry run)만 실행하고 결과를 logs/last_dryrun.log에 남긴다
   workflow_dispatch:
     inputs:
       date:
@@ -26,12 +28,22 @@ jobs:
           GRAPH_HOST: ${{ vars.GRAPH_HOST }}
           GRAPH_VERSION: ${{ vars.GRAPH_VERSION }}
           POST_DATE: ${{ github.event.inputs.date }}
-          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
+          DRY_RUN: ${{ github.event_name == 'push' && 'true' || github.event.inputs.dry_run || 'false' }}
         run: |
           set -o pipefail
+          if [ "${{ github.event_name }}" = "push" ]; then export POST_DATE=$(head -1 .github/dryrun-reel.txt | tr -d '[:space:]'); fi
           python3 scripts/publish_reel.py 2>&1 | tee publish.log
+      - name: 점검 결과 저장
+        if: always() && github.event_name == 'push'
+        run: |
+          mkdir -p logs
+          { echo "점검 시각(UTC): $(date -u +%FT%TZ)  결과: ${{ job.status }}"; cat publish.log 2>/dev/null; } > logs/last_dryrun.log
+          git config user.name "canbly-bot"
+          git config user.email "canbly-bot@users.noreply.github.com"
+          git add logs/last_dryrun.log
+          git commit -m "릴스 점검 결과" && git pull --rebase -q && git push
       - name: 실패 기록 저장
-        if: failure()
+        if: failure() && github.event_name != 'push'
         run: |
           mkdir -p logs
           { echo "릴스 실패 시각(UTC): $(date -u +%FT%TZ)  이벤트: ${{ github.event_name }}"; cat publish.log; } > logs/last_error.log
