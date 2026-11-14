@@ -1,0 +1,6 @@
+{
+ "clean":  {"name":"온결클린","category":"청소업체","url":"ongelclean.imweb.me","headline_box":[190,320,660,432],"note":"m01 첫 화면(하루 종일 걸어도, 흰 양말 그대로), m02~m03 작업 전후 비교, m04~m05 4가지 약속(확정 견적·직영팀·친환경·재청소), m05~m06 서비스 카드(입주·이사·거주)"},
+ "tax":    {"name":"새온 세무회계","category":"세무회계","url":"kimbumu30320190.imweb.me","note":"m01 첫 화면 + 무료 상담 신청 버튼, m02 숫자 신뢰 근거(누적 고객사·경력·유지율), m03 소개 + 상담 버튼"},
+ "clinic": {"name":"수 의료원","category":"병·의원","url":"rebranding3.imweb.me","note":"m01 첫 화면. 상단 제목이 '리브랜딩 홈페이지'로 보이는 오류가 있어 클로즈업 금지"},
+ "villa":  {"name":"헤븐 풀빌라","category":"숙박","url":"heavenpoolvilla.imweb.me","note":"m01 첫 화면"}
+}

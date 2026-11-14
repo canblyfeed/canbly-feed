@@ -1,0 +1,17 @@
+{
+ "id": "2026-11-16", "date": "2026-11-16", "series": "문의 0건 탈출", "episode": 1,
+ "topic": "첫 화면 한 줄 공식",
+ "beats": [
+  {"title": "손님이 3초 만에", "screen": {"site": "clean", "label": "예시", "fake": {"box": [185,300,720,540], "lines": ["Welcome to","Clean Life"]}}},
+  {"title": "나가는 홈페이지", "screen": {"site": "clean", "label": "예시", "fake": {"box": [185,300,720,540], "lines": ["Welcome to","Clean Life"]}, "zoom": [0,0,1500], "to_zoom": [42,63,1295]}},
+  {"x": "영어 슬로건만\n있다", "screen": {"site": "clean", "label": "예시", "fake": {"box": [185,300,720,540], "lines": ["Welcome to","Clean Life"]}, "zoom": [42,63,1295], "to_zoom": [80,140,1100]}},
+  {"x": "업종·지역이\n안 보인다", "screen": {"site": "clean", "label": "예시", "fake": {"box": [185,300,720,540], "lines": ["Welcome to","Clean Life"]}, "zoom": [80,140,1100], "to_zoom": [110,200,950]}},
+  {"x": "뭘 해주는 곳인지\n모른다", "screen": {"site": "clean", "label": "예시", "fake": {"box": [185,300,720,540], "lines": ["Welcome to","Clean Life"]}, "zoom": [110,200,950], "to_zoom": [140,240,820]}},
+  {"title": "온결클린은?", "screen": {"site": "clean", "zoom": [0,0,1500], "wipe_from": {"site": "clean", "fake": {"box": [185,300,720,540], "lines": ["Welcome to","Clean Life"]}, "zoom": [140,240,820]}}},
+  {"title": "첫 줄에\n다 말해요", "title_color": "green", "screen": {"site": "clean", "zoom": [0,0,1500], "to_zoom": [150,250,780], "highlight": [190,320,660,432], "highlight_at": 0.8}},
+  {"title": "첫 화면\n한 줄 공식", "screen": {"site": "clean", "zoom": [150,250,780]}, "chips": ["지역","업종","우리 가게 강점"]},
+  {"compare": {"bad": "Welcome to Clean Life", "good": "○○동 입주청소,\n흰 양말 그대로"}, "screen": {"site": "clean", "zoom": [150,250,780]}},
+  {"title": "우리 가게 첫 화면,\n한 줄로 댓글에!", "sub": "더 좋은 한 줄로\n다듬어 드릴게요"},
+  {"next": "휴대폰으로 보면\n깨지는 홈페이지", "next_cta": "팔로우하고 2편 보기 →"}
+ ]
+}
