@@ -1,3 +1,4 @@
-node_modules/
+node_modules
 *.html
 __pycache__/
+*.tmp.mp4

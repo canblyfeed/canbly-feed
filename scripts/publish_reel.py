@@ -11,8 +11,9 @@ if os.path.exists(f'{folder}/published.json') and not dry: print(f'{folder} 이�
 caption=open(f'{folder}/caption.txt',encoding='utf-8').read().strip()
 assert len(caption)<=2200,'캡션이 2200자를 넘습니다'
 repo=os.environ['GITHUB_REPOSITORY']; sha=os.environ.get('GITHUB_SHA','main')
-url=f'https://raw.githubusercontent.com/{repo}/{sha}/{folder}/reel.mp4'
-print(f'{date}: {url}')
+# 영상 주소 후보: GitHub raw(application/octet-stream) → 실패하면 jsDelivr(video/mp4)
+urls=[f'https://raw.githubusercontent.com/{repo}/{sha}/{folder}/reel.mp4',f'https://cdn.jsdelivr.net/gh/{repo}@{sha}/{folder}/reel.mp4']
+print(f'{date}: {folder}/reel.mp4')
 IG=os.environ.get('IG_USER_ID',''); TOKEN=os.environ.get('IG_ACCESS_TOKEN','')
 if not (IG and TOKEN): print('IG_USER_ID 또는 IG_ACCESS_TOKEN 시크릿이 없습니다'); sys.exit(1)
 BASE=f"https://{os.environ.get('GRAPH_HOST') or 'graph.facebook.com'}/{os.environ.get('GRAPH_VERSION') or 'v23.0'}"
@@ -31,8 +32,14 @@ def wait(cid):
         time.sleep(10)
     raise RuntimeError(f'{cid} 처리 시간 초과')
 me=call('GET',IG,fields='username'); print(f"계정 @{me.get('username')}")
-cid=call('POST',f'{IG}/media',media_type='REELS',video_url=url,caption=caption,share_to_feed='true')['id']
-wait(cid)
+cid=None
+for i,url in enumerate(urls):
+    print('업로드 시도:',url)
+    try:
+        cid=call('POST',f'{IG}/media',media_type='REELS',video_url=url,caption=caption,share_to_feed='true')['id']; wait(cid); break
+    except Exception as e:
+        print('실패:',e); cid=None
+        if i==len(urls)-1: raise
 if dry: print('DRY_RUN: 영상 업로드·처리까지 정상 (실제 발행은 하지 않음)'); sys.exit(0)
 mid=call('POST',f'{IG}/media_publish',creation_id=cid)['id']
 link=call('GET',mid,fields='permalink').get('permalink')
