@@ -1,7 +1,8 @@
 name: 인스타 릴스 자동 발행
 on:
-  schedule:
-    - cron: '0 11 * * 1-5'   # 월~금 20:00 (한국 시간). GitHub 사정으로 몇 분~수십 분 늦을 수 있음
+  # 2026-11-20 캔블리님 요청으로 자동 발행 중단 (힉스필드 영상 월·수·금 12:00 방식으로 바꿀 예정). 다시 켜려면 아래 주석을 푼다
+  # schedule:
+  #   - cron: '0 11 * * 1-5'   # 월~금 20:00 (한국 시간). GitHub 사정으로 몇 분~수십 분 늦을 수 있음
   push:
     paths: ['.github/dryrun-reel.txt']   # 이 파일에 날짜를 적어 푸시하면 점검(dry run)만 실행하고 결과를 logs/last_dryrun.log에 남긴다
   workflow_dispatch:
