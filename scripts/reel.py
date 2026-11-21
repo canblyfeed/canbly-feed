@@ -151,9 +151,10 @@ def render(folder):
                     d.text((W/2,y),ln,font=hf,fill=col,anchor='ma',stroke_width=7,stroke_fill=(0,0,0));y+=108
             for s0,s1,txt in b.get('subs',[]):
                 if s0<=lt<s1:
-                    sf=font('Bold',56);y=1450 if 'hook' in b else 1500
+                    big='hook' not in b  # 훅이 없으면 말 자막 하나만 크게
+                    sf=font('ExtraBold' if big else 'Bold',72 if big else 56);y=1380 if big else 1450
                     for ln in txt.split('\n'):
-                        d.text((W/2,y),ln,font=sf,fill=WHITE,anchor='ma',stroke_width=5,stroke_fill=(0,0,0));y+=80
+                        d.text((W/2,y),ln,font=sf,fill=WHITE,anchor='ma',stroke_width=7 if big else 5,stroke_fill=(0,0,0));y+=100 if big else 80
             frame=img.convert('RGB');p.stdin.write(frame.tobytes())
             if abs(lt-min(D*0.5,1.2))<0.5/FPS:checks.append(frame.resize((270,480)))
             continue
