@@ -14,7 +14,9 @@ usage: python3 scripts/reel.py reels/2026-11-17
   next                                    : 다음 편 예고 (마지막 장면)
   clip {src, from, to}                    : 진행자 영상(폴더 안 파일)을 화면 가득. 장면 길이 = to-from, 소리도 그대로 들어간다
     hook                                  : clip 위쪽 큰 자막 (2줄, 줄당 10자 이내)
-    subs [[시작, 끝, "자막"], ...]          : clip 아래쪽 말 자막 (장면 안 시각, 줄당 16자 이내)
+    subs [[시작, 끝, "자막"], ...]          : clip 아래쪽 말 자막 (장면 안 시각, 2줄, 줄당 12자 이내)
+    card {site, view, zoom, to_zoom, highlight, at:[시작, 끝], label} : 진행자가 말하는 동안 가슴 높이에 사이트 화면 카드
+최상위 music {src, from, volume}           : 배경음악 (폴더 안 파일, 기본 볼륨 0.15). 진행자 목소리 아래에 깔린다
 """
 import sys,os,json,subprocess
 import numpy as np
@@ -141,7 +143,20 @@ def render(folder):
             # 아래 글자가 잘 보이게 아래쪽만 살짝 어둡게 (글자 뒤 박스는 쓰지 않는다)
             for yy in range(1100,H,10):d.rectangle((0,yy,W,yy+10),fill=(0,0,0,int(150*(yy-1100)/(H-1100))))
             img.alpha_composite(ov);d=ImageDraw.Draw(img)
-            d.rectangle((80,212,1000,220),fill=(60,72,66));d.rectangle((80,212,80+int(920*(n+1)/N),220),fill=G)
+            card_on=False
+            if 'card' in b:
+                c=b['card'];c0,c1=c.get('at',[0,D]);ca=min(ease((lt-c0)/0.25),1-ease((lt-c1+0.25)/0.25))
+                if ca>0:
+                    card_on=True;src=img_of(c['site'],c.get('view','desktop.jpg'),c.get('fake'))
+                    sw,sh=src.size;z0=c.get('zoom',[0,0,sw]);z1=c.get('to_zoom',z0);zz=ease((lt-c0)/max(0.3,(c1-c0)*0.8))
+                    rect=[z0[i]+(z1[i]-z0[i])*zz for i in range(3)]
+                    cv=Image.new('RGBA',(W,H),(0,0,0,0));zx,zy,zw,CH=screen_card(cv,src,rect,sites[c['site']]['url'],c.get('label'))
+                    if 'highlight' in c and lt-c0>=c.get('highlight_at',0.6):
+                        hb=c['highlight'];sc=MW/zw;dc=ImageDraw.Draw(cv)
+                        dc.rounded_rectangle((MX+(hb[0]-zx)*sc,MY+BAR+(hb[1]-zy)*sc,MX+(hb[2]-zx)*sc,MY+BAR+(hb[3]-zy)*sc),12,outline=G,width=7)
+                    cy=c.get('y',900)  # 카드 위쪽 위치
+                    cv=cv.crop((0,MY-40,W,MY+BAR+CH+60));al=cv.getchannel('A').point(lambda v:int(v*ca));cv.putalpha(al)
+                    img.alpha_composite(cv,(0,cy-40+int(30*(1-ca))));d=ImageDraw.Draw(img)
             d.text((W-80,262),'@can_bly_official',font=font('Bold',30),fill=(235,240,237),anchor='ra',stroke_width=2,stroke_fill=(0,0,0))
             # 훅(큰 자막)은 얼굴 아래(가슴 높이), 말 자막은 그 아래. 박스 대신 검은 테두리
             if 'hook' in b:
@@ -152,7 +167,7 @@ def render(folder):
             for s0,s1,txt in b.get('subs',[]):
                 if s0<=lt<s1:
                     big='hook' not in b  # 훅이 없으면 말 자막 하나만 크게
-                    sf=font('ExtraBold' if big else 'Bold',72 if big else 56);y=1380 if big else 1450
+                    sf=font('ExtraBold' if big else 'Bold',72 if big else 56);y=(1560 if card_on else 1380) if big else 1450
                     for ln in txt.split('\n'):
                         d.text((W/2,y),ln,font=sf,fill=WHITE,anchor='ma',stroke_width=7 if big else 5,stroke_fill=(0,0,0));y+=100 if big else 80
             frame=img.convert('RGB');p.stdin.write(frame.tobytes())
@@ -225,12 +240,15 @@ def render(folder):
         if isinstance(v,subprocess.Popen):v.stdout.close();v.kill();v.wait()
     p.stdin.close();p.wait()
     if p.returncode!=0:sys.exit('ffmpeg 실패')
-    clips=[(k,b['clip']) for k,b in enumerate(beats) if 'clip' in b]
-    if clips:  # 진행자 영상 소리를 장면 위치에 깔아 다시 묶는다
+    clips=[(k,b['clip']) for k,b in enumerate(beats) if 'clip' in b];music=spec.get('music')
+    if clips or music:  # 진행자 영상 소리를 장면 위치에 깔아 다시 묶는다
         tmp2=os.path.join(folder,'reel.tmp2.mp4');args=['ffmpeg','-loglevel','error','-y','-i',tmp];fl=[];labels=[]
         for i,(k,c) in enumerate(clips):
             args+=['-i',os.path.join(folder,c['src'])];ms=int(starts[k]*1000)
             fl.append(f"[{i+1}:a]atrim={c['from']}:{c['to']},asetpts=PTS-STARTPTS,aresample=44100,adelay={ms}|{ms}[a{i}]");labels.append(f'[a{i}]')
+        if music:
+            args+=['-i',os.path.join(folder,music['src'])];mi=len(clips)+1;mf=music.get('from',0);vol=music.get('volume',0.15)
+            fl.append(f"[{mi}:a]atrim={mf}:{mf+T},asetpts=PTS-STARTPTS,aresample=44100,volume={vol},afade=t=in:d=0.3,afade=t=out:st={max(0,T-0.8)}:d=0.8[am]");labels.append('[am]')
         fl.append(f"anullsrc=channel_layout=stereo:sample_rate=44100,atrim=0:{T}[s]")
         fl.append(f"[s]{''.join(labels)}amix=inputs={len(labels)+1}:duration=first:normalize=0[aout]")
         args+=['-filter_complex',';'.join(fl),'-map','0:v','-map','[aout]','-c:v','copy','-c:a','aac','-b:a','128k','-movflags','+faststart',tmp2]
