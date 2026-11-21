@@ -12,6 +12,9 @@ usage: python3 scripts/reel.py reels/2026-11-17
   chips [..]                              : 아래쪽 칩 "A + B + C"
   caption                                 : 아래쪽 작은 설명
   next                                    : 다음 편 예고 (마지막 장면)
+  clip {src, from, to}                    : 진행자 영상(폴더 안 파일)을 화면 가득. 장면 길이 = to-from, 소리도 그대로 들어간다
+    hook                                  : clip 위쪽 큰 자막 (2줄, 줄당 10자 이내)
+    subs [[시작, 끝, "자막"], ...]          : clip 아래쪽 말 자막 (장면 안 시각, 줄당 16자 이내)
 """
 import sys,os,json,subprocess
 import numpy as np
@@ -101,7 +104,20 @@ def chip(d,x,y,s,a):
 def render(folder):
     spec=json.load(open(os.path.join(folder,'reel.json'),encoding='utf-8'))
     beats=spec['beats'];series=spec.get('series','');ep=spec.get('episode')
+    for b in beats:
+        if 'clip' in b:b['dur']=b['clip']['to']-b['clip']['from']
     durs=[b.get('dur',1.5) for b in beats];T=sum(durs);N=int(round(T*FPS))
+    clip_proc={}
+    def clip_frame(k,b):
+        """clip 장면의 다음 프레임 (1080x1920 RGB)"""
+        if k not in clip_proc:
+            c=b['clip'];D=c['to']-c['from']
+            clip_proc[k]=subprocess.Popen(['ffmpeg','-loglevel','error','-ss',str(c['from']),'-t',str(D),'-i',os.path.join(folder,c['src']),
+                '-vf',f'scale={W}:{H}:force_original_aspect_ratio=increase,crop={W}:{H},fps={FPS}','-f','rawvideo','-pix_fmt','rgb24','-'],stdout=subprocess.PIPE)
+            clip_proc['last'+str(k)]=None
+        raw=clip_proc[k].stdout.read(W*H*3)
+        if len(raw)==W*H*3:clip_proc['last'+str(k)]=Image.frombytes('RGB',(W,H),raw)
+        return clip_proc['last'+str(k)].copy().convert('RGBA')
     starts=np.cumsum([0]+durs[:-1])
     BG=background()
     cache={}
@@ -120,6 +136,30 @@ def render(folder):
     tag=f"{series} {ep}편" if ep else series
     for n in range(N):
         t=n/FPS;k=int(np.searchsorted(starts,t,side='right')-1);b=beats[k];lt=t-starts[k];D=durs[k]
+        if 'clip' in b:
+            img=clip_frame(k,b);ov=Image.new('RGBA',(W,H),(0,0,0,0));d=ImageDraw.Draw(ov)
+            # 위·아래 글자가 잘 보이게 어둡게
+            for yy in range(0,700,10):d.rectangle((0,yy,W,yy+10),fill=(0,0,0,int(150*(1-yy/700))))
+            for yy in range(1300,H,10):d.rectangle((0,yy,W,yy+10),fill=(0,0,0,int(170*(yy-1300)/(H-1300))))
+            img.alpha_composite(ov);d=ImageDraw.Draw(img)
+            d.rectangle((80,212,1000,220),fill=(60,72,66));d.rectangle((80,212,80+int(920*(n+1)/N),220),fill=G)
+            d.text((W-80,262),'@can_bly_official',font=font('Bold',30),fill=(220,230,225),anchor='ra')
+            ha=1-ease((lt-b.get('hook_until',1.5))/0.3)  # 훅은 처음 잠깐만 보이고 사라져 얼굴을 가리지 않는다
+            if 'hook' in b and ha>0:
+                hl=Image.new('RGBA',(W,H),(0,0,0,0));hd=ImageDraw.Draw(hl);hf=font('ExtraBold',82);y=300
+                for ln in b['hook'].split('\n'):
+                    tw=hd.textlength(ln,font=hf);hd.rounded_rectangle(((W-tw)/2-28,y-12,(W+tw)/2+28,y+98),16,fill=(0,0,0,int(170*ha)))
+                    hd.text((W/2,y),ln,font=hf,fill=A(G if ln==b['hook'].split('\n')[-1] and b.get('hook_green_last') else WHITE,ha),anchor='ma');y+=114
+                img.alpha_composite(hl);d=ImageDraw.Draw(img)
+            for s0,s1,txt in b.get('subs',[]):
+                if s0<=lt<s1:
+                    sf=font('Bold',58);y=1500
+                    for ln in txt.split('\n'):
+                        tw=d.textlength(ln,font=sf);d.rounded_rectangle(((W-tw)/2-26,y-10,(W+tw)/2+26,y+76),14,fill=(0,0,0,190))
+                        d.text((W/2,y),ln,font=sf,fill=WHITE,anchor='ma');y+=92
+            frame=img.convert('RGB');p.stdin.write(frame.tobytes())
+            if abs(lt-min(D*0.5,1.2))<0.5/FPS:checks.append(frame.resize((270,480)))
+            continue
         img=BG.copy();d=ImageDraw.Draw(img)
         # 머리: 진행 막대 + 시리즈 + 계정
         d.rectangle((80,212,1000,220),fill=(60,72,66));d.rectangle((80,212,80+int(920*(n+1)/N),220),fill=G)
@@ -183,8 +223,21 @@ def render(folder):
             d.multiline_text((80,yy),b['caption'],font=font('Bold',46),fill=A(SUBC,ease((lt-0.25)/0.2)),spacing=14)
         frame=img.convert('RGB');p.stdin.write(frame.tobytes())
         if abs(lt-min(D*0.8,1.2))<0.5/FPS:checks.append(frame.resize((270,480)))
+    for v in clip_proc.values():
+        if isinstance(v,subprocess.Popen):v.stdout.close();v.kill();v.wait()
     p.stdin.close();p.wait()
     if p.returncode!=0:sys.exit('ffmpeg 실패')
+    clips=[(k,b['clip']) for k,b in enumerate(beats) if 'clip' in b]
+    if clips:  # 진행자 영상 소리를 장면 위치에 깔아 다시 묶는다
+        tmp2=os.path.join(folder,'reel.tmp2.mp4');args=['ffmpeg','-loglevel','error','-y','-i',tmp];fl=[];labels=[]
+        for i,(k,c) in enumerate(clips):
+            args+=['-i',os.path.join(folder,c['src'])];ms=int(starts[k]*1000)
+            fl.append(f"[{i+1}:a]atrim={c['from']}:{c['to']},asetpts=PTS-STARTPTS,aresample=44100,adelay={ms}|{ms}[a{i}]");labels.append(f'[a{i}]')
+        fl.append(f"anullsrc=channel_layout=stereo:sample_rate=44100,atrim=0:{T}[s]")
+        fl.append(f"[s]{''.join(labels)}amix=inputs={len(labels)+1}:duration=first:normalize=0[aout]")
+        args+=['-filter_complex',';'.join(fl),'-map','0:v','-map','[aout]','-c:v','copy','-c:a','aac','-b:a','128k','-movflags','+faststart',tmp2]
+        if subprocess.run(args).returncode!=0:sys.exit('소리 합치기 실패')
+        os.replace(tmp2,tmp)
     os.replace(tmp,out)
     sheet=Image.new('RGB',(len(checks)*280,480),WHITE)
     for i,c in enumerate(checks):sheet.paste(c,(i*280,0))
