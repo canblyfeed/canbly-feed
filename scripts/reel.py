@@ -138,25 +138,22 @@ def render(folder):
         t=n/FPS;k=int(np.searchsorted(starts,t,side='right')-1);b=beats[k];lt=t-starts[k];D=durs[k]
         if 'clip' in b:
             img=clip_frame(k,b);ov=Image.new('RGBA',(W,H),(0,0,0,0));d=ImageDraw.Draw(ov)
-            # 위·아래 글자가 잘 보이게 어둡게
-            for yy in range(0,700,10):d.rectangle((0,yy,W,yy+10),fill=(0,0,0,int(150*(1-yy/700))))
-            for yy in range(1300,H,10):d.rectangle((0,yy,W,yy+10),fill=(0,0,0,int(170*(yy-1300)/(H-1300))))
+            # 아래 글자가 잘 보이게 아래쪽만 살짝 어둡게 (글자 뒤 박스는 쓰지 않는다)
+            for yy in range(1100,H,10):d.rectangle((0,yy,W,yy+10),fill=(0,0,0,int(150*(yy-1100)/(H-1100))))
             img.alpha_composite(ov);d=ImageDraw.Draw(img)
             d.rectangle((80,212,1000,220),fill=(60,72,66));d.rectangle((80,212,80+int(920*(n+1)/N),220),fill=G)
-            d.text((W-80,262),'@can_bly_official',font=font('Bold',30),fill=(220,230,225),anchor='ra')
-            ha=1-ease((lt-b.get('hook_until',1.5))/0.3)  # 훅은 처음 잠깐만 보이고 사라져 얼굴을 가리지 않는다
-            if 'hook' in b and ha>0:
-                hl=Image.new('RGBA',(W,H),(0,0,0,0));hd=ImageDraw.Draw(hl);hf=font('ExtraBold',82);y=300
-                for ln in b['hook'].split('\n'):
-                    tw=hd.textlength(ln,font=hf);hd.rounded_rectangle(((W-tw)/2-28,y-12,(W+tw)/2+28,y+98),16,fill=(0,0,0,int(170*ha)))
-                    hd.text((W/2,y),ln,font=hf,fill=A(G if ln==b['hook'].split('\n')[-1] and b.get('hook_green_last') else WHITE,ha),anchor='ma');y+=114
-                img.alpha_composite(hl);d=ImageDraw.Draw(img)
+            d.text((W-80,262),'@can_bly_official',font=font('Bold',30),fill=(235,240,237),anchor='ra',stroke_width=2,stroke_fill=(0,0,0))
+            # 훅(큰 자막)은 얼굴 아래(가슴 높이), 말 자막은 그 아래. 박스 대신 검은 테두리
+            if 'hook' in b:
+                hf=font('ExtraBold',84);y=1180;lines=b['hook'].split('\n')
+                for i,ln in enumerate(lines):
+                    col=G if i==len(lines)-1 and b.get('hook_green_last') else WHITE
+                    d.text((W/2,y),ln,font=hf,fill=col,anchor='ma',stroke_width=7,stroke_fill=(0,0,0));y+=108
             for s0,s1,txt in b.get('subs',[]):
                 if s0<=lt<s1:
-                    sf=font('Bold',58);y=1500
+                    sf=font('Bold',56);y=1450 if 'hook' in b else 1500
                     for ln in txt.split('\n'):
-                        tw=d.textlength(ln,font=sf);d.rounded_rectangle(((W-tw)/2-26,y-10,(W+tw)/2+26,y+76),14,fill=(0,0,0,190))
-                        d.text((W/2,y),ln,font=sf,fill=WHITE,anchor='ma');y+=92
+                        d.text((W/2,y),ln,font=sf,fill=WHITE,anchor='ma',stroke_width=5,stroke_fill=(0,0,0));y+=80
             frame=img.convert('RGB');p.stdin.write(frame.tobytes())
             if abs(lt-min(D*0.5,1.2))<0.5/FPS:checks.append(frame.resize((270,480)))
             continue
