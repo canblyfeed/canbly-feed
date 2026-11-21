@@ -2,3 +2,5 @@ node_modules
 *.html
 __pycache__/
 *.tmp.mp4
+!docs/**/*.html
+!docs/*.html

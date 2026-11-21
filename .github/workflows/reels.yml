@@ -1,10 +1,10 @@
 name: 인스타 릴스 자동 발행
 on:
-  # 2026-11-20 캔블리님 요청으로 자동 발행 중단 (힉스필드 영상 월·수·금 12:00 방식으로 바꿀 예정). 다시 켜려면 아래 주석을 푼다
-  # schedule:
-  #   - cron: '0 11 * * 1-5'   # 월~금 20:00 (한국 시간). GitHub 사정으로 몇 분~수십 분 늦을 수 있음
+  # 월·수·금 23:00 (한국 시간). reels/<날짜>/approved.txt(캔블리님 허락)가 있는 편만 올라간다. GitHub 사정으로 몇 분~수십 분 늦을 수 있음
+  schedule:
+    - cron: '0 14 * * 1,3,5'
   push:
-    paths: ['.github/dryrun-reel.txt']   # 이 파일에 날짜를 적어 푸시하면 점검(dry run)만 실행하고 결과를 logs/last_dryrun.log에 남긴다
+    paths: ['.github/dryrun-reel.txt', 'reels/*/approved.txt']   # dryrun-reel.txt: 점검만 / approved.txt: 23시 이후 허락이면 바로 발행
   workflow_dispatch:
     inputs:
       date:
@@ -22,6 +22,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
       - name: 발행
         env:
           IG_USER_ID: ${{ secrets.IG_USER_ID }}
@@ -29,13 +31,19 @@ jobs:
           GRAPH_HOST: ${{ vars.GRAPH_HOST }}
           GRAPH_VERSION: ${{ vars.GRAPH_VERSION }}
           POST_DATE: ${{ github.event.inputs.date }}
-          DRY_RUN: ${{ github.event_name == 'push' && 'true' || github.event.inputs.dry_run || 'false' }}
+          DRY_RUN: ${{ github.event.inputs.dry_run || 'false' }}
         run: |
           set -o pipefail
-          if [ "${{ github.event_name }}" = "push" ]; then export POST_DATE=$(head -1 .github/dryrun-reel.txt | tr -d '[:space:]'); fi
+          if [ "${{ github.event_name }}" = "push" ]; then
+            if git diff --name-only ${{ github.event.before }} ${{ github.sha }} 2>/dev/null | grep -q dryrun-reel.txt; then
+              export DRY_RUN=true POST_DATE=$(head -1 .github/dryrun-reel.txt | tr -d '[:space:]'); echo DRY_LOG=1 >> $GITHUB_ENV
+            else
+              export EVENT=approved_push
+            fi
+          fi
           python3 scripts/publish_reel.py 2>&1 | tee publish.log
       - name: 점검 결과 저장
-        if: always() && github.event_name == 'push'
+        if: always() && github.event_name == 'push' && env.DRY_LOG == '1'
         run: |
           mkdir -p logs
           { echo "점검 시각(UTC): $(date -u +%FT%TZ)  결과: ${{ job.status }}"; cat publish.log 2>/dev/null; } > logs/last_dryrun.log
@@ -44,7 +52,7 @@ jobs:
           git add logs/last_dryrun.log
           git commit -m "릴스 점검 결과" && git pull --rebase -q && git push
       - name: 실패 기록 저장
-        if: failure() && github.event_name != 'push'
+        if: failure() && env.DRY_LOG != '1'
         run: |
           mkdir -p logs
           { echo "릴스 실패 시각(UTC): $(date -u +%FT%TZ)  이벤트: ${{ github.event_name }}"; cat publish.log; } > logs/last_error.log

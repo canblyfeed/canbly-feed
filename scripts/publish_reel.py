@@ -8,6 +8,10 @@ dry=os.environ.get('DRY_RUN','false').lower()=='true'
 folder=f'reels/{date}'
 if not os.path.exists(f'{folder}/reel.mp4'): print(f'{folder}/reel.mp4 없음: 오늘 발행할 릴스가 없습니다'); sys.exit(0)
 if os.path.exists(f'{folder}/published.json') and not dry: print(f'{folder} 이미 발행됨'); sys.exit(0)
+# 캔블리님 허락(approved.txt)이 있는 편만 발행한다. 허락은 22시 확인 알림 대화에서 받는다
+if not dry and not os.path.exists(f'{folder}/approved.txt'): print(f'{folder}: 허락(approved.txt)이 없어 발행하지 않습니다'); sys.exit(0)
+# 허락이 23시 전에 들어오면(push) 기다렸다가 23시 예약 실행에서 올린다. 23시가 지나서 허락하면 바로 올린다
+if os.environ.get('EVENT')=='approved_push' and datetime.datetime.now(KST).time()<datetime.time(22,55): print('발행 시간(23:00) 전이라 예약 실행을 기다립니다'); sys.exit(0)
 caption=open(f'{folder}/caption.txt',encoding='utf-8').read().strip()
 assert len(caption)<=2200,'캡션이 2200자를 넘습니다'
 repo=os.environ['GITHUB_REPOSITORY']; sha=os.environ.get('GITHUB_SHA','main')
